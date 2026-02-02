@@ -1,181 +1,176 @@
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import { motion } from 'framer-motion';
-import { TrendingUp, AlertCircle, CheckCircle2, ArrowLeft } from 'lucide-react';
+import { TrendingUp, AlertCircle, CheckCircle2, ArrowRight, BookOpen, Clock, DollarSign, Globe } from 'lucide-react';
 import Card from '../components/Card';
-import Button from '../components/Button';
-import ProgressBar from '../components/ProgressBar';
-import { skills } from '../data/dummyData';
+import { ROADMAP_DATA } from '../data/dummyData';
 
 interface GapAnalysisProps {
   skillRatings: Record<string, number>;
   quizScore: number;
   onComplete: () => void;
   userName: string;
+  selectedTrack: string;
+  onBack: () => void;
 }
 
-export default function GapAnalysis({ skillRatings, quizScore, onComplete, userName }: GapAnalysisProps) {
-  const [showConfetti, setShowConfetti] = useState(false);
+type View = 'analysis' | 'preferences' | 'roadmap';
 
-  useEffect(() => {
-    if (quizScore >= 70) {
-      setShowConfetti(true);
-      setTimeout(() => setShowConfetti(false), 3000);
-    }
-  }, []);
+export default function GapAnalysis({ skillRatings, quizScore, onComplete, userName, selectedTrack, onBack }: GapAnalysisProps) {
+  const [view, setView] = useState<View>('analysis');
+  const [preferences, setPreferences] = useState({ type: 'free', lang: 'arabic', mode: 'online' });
 
-  const gapAnalysis = skills.map(skill => ({
-    ...skill,
-    current: skillRatings[skill.id] || 0,
-    gap: Math.max(0, skill.required - (skillRatings[skill.id] || 0))
-  }));
+  // حساب المستوى
+  const averageRating = Object.values(skillRatings).reduce((a, b) => a + b, 0) / Object.values(skillRatings).length;
+  const finalScore = (quizScore * 0.6) + (averageRating * 10 * 0.4); // معادلة وهمية للمستوى
+  let userLevel = 'مبتدئ';
+  if (finalScore > 80) userLevel = 'خبير';
+  else if (finalScore > 50) userLevel = 'متوسط';
 
-  const overallReadiness = Math.round(
-    (gapAnalysis.reduce((acc, skill) => acc + skill.current, 0) /
-    gapAnalysis.reduce((acc, skill) => acc + skill.required, 0)) * 100
+  // الرود ماب المختار
+  // @ts-ignore
+  const roadmapItems = ROADMAP_DATA[selectedTrack]?.[preferences.type] || [];
+
+  // --- Handlers ---
+  const handleInternalBack = () => {
+    if (view === 'analysis') onBack();
+    else if (view === 'preferences') setView('analysis');
+    else if (view === 'roadmap') setView('preferences');
+  };
+
+  // --- Renderers ---
+
+  // 1. Analysis Result
+  const renderAnalysis = () => (
+    <div className="space-y-6">
+      <div className="text-center mb-8">
+        <h1 className="text-3xl font-bold text-slate-800 mb-2">نتائج التحليل 📈</h1>
+        <p className="text-slate-600">مستواك الحالي: <span className="text-blue-600 font-bold text-lg">{userLevel}</span> ({Math.round(finalScore)}%)</p>
+      </div>
+
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <div className="bg-white p-6 rounded-2xl border border-slate-100 shadow-sm text-center">
+           <CheckCircle2 className="mx-auto text-emerald-500 mb-2" size={32} />
+           <h3 className="font-bold text-slate-700">نقاط القوة</h3>
+           <p className="text-sm text-slate-500 mt-1">أساسيات قوية في {selectedTrack === 'frontend' ? 'HTML/CSS' : 'Excel'}</p>
+        </div>
+        <div className="bg-white p-6 rounded-2xl border border-slate-100 shadow-sm text-center">
+           <AlertCircle className="mx-auto text-orange-500 mb-2" size={32} />
+           <h3 className="font-bold text-slate-700">نواقص السوق</h3>
+           <p className="text-sm text-slate-500 mt-1">تحتاج لزيادة الخبرة في {selectedTrack === 'frontend' ? 'React Hooks' : 'Python Pandas'}</p>
+        </div>
+        <div className="bg-white p-6 rounded-2xl border border-slate-100 shadow-sm text-center">
+           <TrendingUp className="mx-auto text-blue-500 mb-2" size={32} />
+           <h3 className="font-bold text-slate-700">التطور المتوقع</h3>
+           <p className="text-sm text-slate-500 mt-1">يمكنك الوصول لمستوى الاحتراف خلال 3 أشهر</p>
+        </div>
+      </div>
+
+      <button onClick={() => setView('preferences')} className="w-full bg-slate-900 text-white py-4 rounded-xl font-bold mt-4 hover:bg-slate-800">
+        بناء خطة التعلم (Roadmap)
+      </button>
+    </div>
+  );
+
+  // 2. Preferences Form
+  const renderPreferences = () => (
+    <div className="max-w-md mx-auto bg-white p-8 rounded-2xl shadow-sm border border-slate-100">
+      <h2 className="text-2xl font-bold text-center mb-6 text-slate-800">تفضيلات التعلم ⚙️</h2>
+      
+      <div className="space-y-6">
+        <div>
+          <label className="flex items-center gap-2 font-bold text-slate-700 mb-3"><DollarSign size={18} /> التكلفة</label>
+          <div className="flex gap-4">
+            <button onClick={() => setPreferences({...preferences, type: 'free'})} className={`flex-1 py-3 rounded-xl border-2 font-bold ${preferences.type === 'free' ? 'border-green-500 bg-green-50 text-green-700' : 'border-slate-100'}`}>مجاني</button>
+            <button onClick={() => setPreferences({...preferences, type: 'paid'})} className={`flex-1 py-3 rounded-xl border-2 font-bold ${preferences.type === 'paid' ? 'border-purple-500 bg-purple-50 text-purple-700' : 'border-slate-100'}`}>مدفوع (احترافي)</button>
+          </div>
+        </div>
+
+        <div>
+          <label className="flex items-center gap-2 font-bold text-slate-700 mb-3"><Globe size={18} /> اللغة</label>
+          <div className="flex gap-4">
+            <button onClick={() => setPreferences({...preferences, lang: 'arabic'})} className={`flex-1 py-3 rounded-xl border-2 font-bold ${preferences.lang === 'arabic' ? 'border-blue-500 bg-blue-50 text-blue-700' : 'border-slate-100'}`}>عربي</button>
+            <button onClick={() => setPreferences({...preferences, lang: 'english'})} className={`flex-1 py-3 rounded-xl border-2 font-bold ${preferences.lang === 'english' ? 'border-blue-500 bg-blue-50 text-blue-700' : 'border-slate-100'}`}>English</button>
+          </div>
+        </div>
+
+        <div>
+          <label className="flex items-center gap-2 font-bold text-slate-700 mb-3"><Clock size={18} /> طريقة التعلم</label>
+          <select className="w-full p-3 border rounded-xl bg-slate-50" onChange={(e) => setPreferences({...preferences, mode: e.target.value})}>
+            <option value="online">أونلاين (Self-Paced)</option>
+            <option value="offline">أوفلاين (مراكز تدريب)</option>
+            <option value="hybrid">هجين (Hybrid)</option>
+          </select>
+        </div>
+
+        <button onClick={() => setView('roadmap')} className="w-full bg-blue-600 text-white py-3 rounded-xl font-bold mt-2">
+          عرض الخطة المقترحة
+        </button>
+      </div>
+    </div>
+  );
+
+  // 3. Roadmap Display
+  const renderRoadmap = () => (
+    <div className="space-y-6">
+       <div className="text-center mb-6">
+         <h2 className="text-2xl font-bold text-slate-800">خارطة الطريق المخصصة 🗺️</h2>
+         <p className="text-slate-500">تم تصميم هذا المسار بناءً على مستواك الحالي وتفضيلاتك</p>
+       </div>
+
+       <div className="relative border-r-4 border-blue-100 mr-4 space-y-8 pr-8">
+         {roadmapItems.map((item: any, idx: number) => (
+           <motion.div 
+             key={idx}
+             initial={{ opacity: 0, x: -20 }}
+             animate={{ opacity: 1, x: 0 }}
+             transition={{ delay: idx * 0.2 }}
+             className="relative"
+           >
+             <span className="absolute -right-[42px] top-0 w-6 h-6 rounded-full bg-blue-500 border-4 border-white shadow-sm"></span>
+             <div className="bg-white p-5 rounded-xl border border-slate-200 shadow-sm hover:border-blue-400 transition-colors">
+               <div className="flex justify-between items-start mb-2">
+                 <h3 className="font-bold text-lg text-slate-800">{item.title}</h3>
+                 <span className="bg-blue-50 text-blue-700 px-2 py-1 rounded text-xs font-bold">{item.duration}</span>
+               </div>
+               <div className="flex items-center gap-2 text-sm text-slate-500">
+                  <BookOpen size={14} /> <span>نوع المصدر: {item.type}</span>
+               </div>
+             </div>
+           </motion.div>
+         ))}
+       </div>
+
+       <div className="bg-emerald-50 p-4 rounded-xl border border-emerald-100 flex items-center gap-3">
+          <CheckCircle2 className="text-emerald-600" />
+          <div>
+            <h4 className="font-bold text-emerald-800">جاهز للانطلاق؟</h4>
+            <p className="text-sm text-emerald-700">بإكمالك لهذا المسار، ستكون مؤهلاً للتقدم لـ 150+ وظيفة في قاعدة بياناتنا.</p>
+          </div>
+       </div>
+
+       <button onClick={onComplete} className="w-full bg-slate-900 text-white py-4 rounded-xl font-bold">
+         الانتقال للوحة التحكم (Dashboard)
+       </button>
+    </div>
   );
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100 p-8 relative overflow-hidden">
-      {showConfetti && (
-        <div className="fixed inset-0 pointer-events-none z-50">
-          {[...Array(50)].map((_, i) => (
-            <motion.div
-              key={i}
-              initial={{ y: -100, x: Math.random() * window.innerWidth, opacity: 1 }}
-              animate={{ y: window.innerHeight + 100, rotate: Math.random() * 360 }}
-              transition={{ duration: 2 + Math.random() * 2, ease: 'linear' }}
-              className="absolute text-3xl"
-            >
-              {['🎉', '⭐', '🚀', '💪', '🏆'][Math.floor(Math.random() * 5)]}
-            </motion.div>
-          ))}
-        </div>
-      )}
+    <div className="min-h-screen bg-slate-50 p-8">
+      <div className="max-w-4xl mx-auto">
+        <button onClick={handleInternalBack} className="flex items-center gap-2 text-slate-400 hover:text-slate-600 mb-6">
+           <ArrowRight size={20} /> عودة
+        </button>
 
-      <motion.div
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        className="max-w-6xl mx-auto"
-      >
-        <div className="text-center mb-12">
-          <motion.div
-            initial={{ scale: 0 }}
-            animate={{ scale: 1 }}
-            transition={{ type: 'spring', stiffness: 200 }}
-          >
-            <h1 className="text-4xl font-bold text-slate-800 mb-2">تحليل الفجوات 📈</h1>
-            <p className="text-xl text-slate-600">نتائجك ومسارك التعليمي المقترح</p>
-          </motion.div>
-        </div>
-
-        <div className="grid md:grid-cols-3 gap-6 mb-8">
-          <Card hover={false}>
-            <div className="text-center">
-              <TrendingUp className="mx-auto mb-3 text-[#FF4B4B]" size={40} />
-              <h3 className="text-3xl font-bold text-slate-800 mb-1">{overallReadiness}%</h3>
-              <p className="text-slate-600">الجاهزية الإجمالية</p>
-            </div>
-          </Card>
-
-          <Card hover={false}>
-            <div className="text-center">
-              <CheckCircle2 className="mx-auto mb-3 text-green-500" size={40} />
-              <h3 className="text-3xl font-bold text-slate-800 mb-1">{quizScore}%</h3>
-              <p className="text-slate-600">نتيجة الاختبار</p>
-            </div>
-          </Card>
-
-          <Card hover={false}>
-            <div className="text-center">
-              <AlertCircle className="mx-auto mb-3 text-orange-500" size={40} />
-              <h3 className="text-3xl font-bold text-slate-800 mb-1">
-                {gapAnalysis.filter(s => s.gap > 3).length}
-              </h3>
-              <p className="text-slate-600">مهارات تحتاج تطوير</p>
-            </div>
-          </Card>
-        </div>
-
-        <Card className="mb-8">
-          <h2 className="text-2xl font-bold text-slate-800 mb-6 flex items-center gap-2">
-            <span>📊</span>
-            تحليل المهارات التفصيلي
-          </h2>
-
-          <div className="space-y-6">
-            {gapAnalysis.map((skill, index) => (
-              <motion.div
-                key={skill.id}
-                initial={{ opacity: 0, x: -20 }}
-                animate={{ opacity: 1, x: 0 }}
-                transition={{ delay: index * 0.1 }}
-                className="space-y-2"
-              >
-                <div className="flex justify-between items-center">
-                  <div>
-                    <h4 className="font-bold text-slate-700">{skill.name}</h4>
-                    <p className="text-sm text-slate-500">
-                      المطلوب: {skill.required}/10 | مستواك: {skill.current}/10
-                    </p>
-                  </div>
-                  {skill.gap === 0 ? (
-                    <span className="px-3 py-1 bg-green-100 text-green-700 rounded-full text-sm font-semibold">
-                      ✓ ممتاز
-                    </span>
-                  ) : skill.gap <= 3 ? (
-                    <span className="px-3 py-1 bg-yellow-100 text-yellow-700 rounded-full text-sm font-semibold">
-                      جيد
-                    </span>
-                  ) : (
-                    <span className="px-3 py-1 bg-red-100 text-red-700 rounded-full text-sm font-semibold">
-                      يحتاج تطوير
-                    </span>
-                  )}
-                </div>
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <p className="text-xs text-slate-600 mb-1">مستواك الحالي</p>
-                    <ProgressBar progress={(skill.current / 10) * 100} showLabel={false} />
-                  </div>
-                  <div>
-                    <p className="text-xs text-slate-600 mb-1">المستوى المطلوب</p>
-                    <ProgressBar progress={(skill.required / 10) * 100} color="#10B981" showLabel={false} />
-                  </div>
-                </div>
-              </motion.div>
-            ))}
-          </div>
-        </Card>
-
-        <Card className="mb-8 bg-gradient-to-br from-[#FF4B4B] to-[#E63946] text-white">
-          <h2 className="text-2xl font-bold mb-4">🎯 توصياتنا لك</h2>
-          <ul className="space-y-3 text-lg">
-            <li className="flex items-start gap-2">
-              <span>•</span>
-              <span>ابدأ بتطوير المهارات ذات الفجوة الأكبر أولاً</span>
-            </li>
-            <li className="flex items-start gap-2">
-              <span>•</span>
-              <span>خصص ساعة يوميًا للتعلم والممارسة</span>
-            </li>
-            <li className="flex items-start gap-2">
-              <span>•</span>
-              <span>انضم إلى مجتمعنا للحصول على الدعم والإرشاد</span>
-            </li>
-          </ul>
-        </Card>
-
-        <div className="flex justify-center">
-          <Button
-            onClick={onComplete}
-            variant="primary"
-            size="lg"
-            icon={ArrowLeft}
-          >
-            ابدأ رحلة التعلم
-          </Button>
-        </div>
-      </motion.div>
+        <motion.div
+           key={view}
+           initial={{ opacity: 0, y: 10 }}
+           animate={{ opacity: 1, y: 0 }}
+        >
+          {view === 'analysis' && renderAnalysis()}
+          {view === 'preferences' && renderPreferences()}
+          {view === 'roadmap' && renderRoadmap()}
+        </motion.div>
+      </div>
     </div>
   );
 }

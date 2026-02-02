@@ -1,18 +1,23 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
-import { ArrowLeft } from 'lucide-react';
+import { ArrowLeft, ArrowRight } from 'lucide-react';
 import Card from '../components/Card';
 import Button from '../components/Button';
-import SkillSlider from '../components/SkillSlider';
-import { skills } from '../data/dummyData';
+import SkillSlider from '../components/SkillSlider'; // تأكد أن السلايدر يدعم max={10}
+import { TRACK_SPECIFIC_SKILLS } from '../data/dummyData';
 
 interface SelfAssessmentProps {
   onNext: (skillRatings: Record<string, number>) => void;
   userName: string;
+  selectedTrack: string; // استلام التراك المختار
+  onBack: () => void;
 }
 
-export default function SelfAssessment({ onNext, userName }: SelfAssessmentProps) {
+export default function SelfAssessment({ onNext, userName, selectedTrack, onBack }: SelfAssessmentProps) {
   const [skillRatings, setSkillRatings] = useState<Record<string, number>>({});
+  
+  // جلب المهارات الخاصة بالتراك، أو مهارات افتراضية
+  const skillsToRate = TRACK_SPECIFIC_SKILLS[selectedTrack] || TRACK_SPECIFIC_SKILLS['frontend'];
 
   const handleSkillChange = (skillId: string, value: number) => {
     setSkillRatings(prev => ({ ...prev, [skillId]: value }));
@@ -22,69 +27,65 @@ export default function SelfAssessment({ onNext, userName }: SelfAssessmentProps
     onNext(skillRatings);
   };
 
-  const allSkillsRated = skills.length === Object.keys(skillRatings).length;
+  const allSkillsRated = skillsToRate.length === Object.keys(skillRatings).length;
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100 p-8">
-      <motion.div
-        initial={{ opacity: 0, x: 100 }}
-        animate={{ opacity: 1, x: 0 }}
-        className="max-w-3xl mx-auto"
-      >
-        <div className="text-center mb-12">
-          <h1 className="text-4xl font-bold text-slate-800 mb-2">قيّم مهاراتك 📊</h1>
-          <p className="text-xl text-slate-600">ساعدنا في فهم مستواك الحالي</p>
+    <div className="min-h-screen bg-slate-50 p-8 flex flex-col items-center">
+      
+      <div className="w-full max-w-3xl flex justify-between items-center mb-8">
+         <button onClick={onBack} className="flex items-center gap-2 text-slate-400 hover:text-slate-600">
+           <ArrowRight size={20} /> عودة
+         </button>
+         <h2 className="text-xl font-bold text-blue-600">{selectedTrack === 'frontend' ? 'تطوير الواجهات' : 'تحليل البيانات'}</h2>
+      </div>
 
-          <div className="flex items-center justify-center gap-3 mt-8">
-            <div className="flex items-center gap-2 opacity-40">
-              <div className="w-10 h-10 rounded-full bg-green-500 text-white flex items-center justify-center">✓</div>
-              <span className="font-semibold text-slate-600">اكتشاف المسار</span>
-            </div>
-            <div className="w-16 h-1 bg-green-500"></div>
-            <div className="flex items-center gap-2">
-              <div className="w-10 h-10 rounded-full bg-[#FF4B4B] text-white flex items-center justify-center font-bold">2</div>
-              <span className="font-semibold text-slate-700">التقييم الذاتي</span>
-            </div>
-            <div className="w-16 h-1 bg-slate-300"></div>
-            <div className="flex items-center gap-2 opacity-40">
-              <div className="w-10 h-10 rounded-full bg-slate-300 text-slate-600 flex items-center justify-center font-bold">3</div>
-              <span className="font-semibold text-slate-600">اختبار الذكاء</span>
-            </div>
-          </div>
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        className="max-w-3xl w-full"
+      >
+        <div className="text-center mb-10">
+          <h1 className="text-3xl font-bold text-slate-800 mb-2">تقييم المهارات التقنية 📊</h1>
+          <p className="text-slate-600">قيم مستواك الحالي (من 1 إلى 10) في الأدوات التالية بصدق.</p>
         </div>
 
-        <Card className="mb-8">
-          <div className="space-y-8">
-            {skills.map((skill, index) => (
-              <motion.div
-                key={skill.id}
-                initial={{ opacity: 0, x: -20 }}
-                animate={{ opacity: 1, x: 0 }}
-                transition={{ delay: index * 0.1 }}
-              >
-                <SkillSlider skill={skill} onChange={handleSkillChange} />
-              </motion.div>
-            ))}
-          </div>
-        </Card>
-
-        {allSkillsRated && (
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            className="text-center"
-          >
-            <p className="text-green-600 font-semibold mb-4">✓ رائع! أكملت تقييم جميع المهارات</p>
-            <Button
-              onClick={handleNext}
-              variant="primary"
-              size="lg"
-              icon={ArrowLeft}
+        <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-8 space-y-8">
+          {skillsToRate.map((skill, index) => (
+            <motion.div
+              key={skill.id}
+              initial={{ opacity: 0, x: -10 }}
+              animate={{ opacity: 1, x: 0 }}
+              transition={{ delay: index * 0.05 }}
             >
-              التالي: اختبار الذكاء الاصطناعي
-            </Button>
-          </motion.div>
-        )}
+              <div className="flex justify-between mb-2">
+                <label className="font-bold text-slate-700">{skill.name}</label>
+                <span className={`font-mono font-bold ${skillRatings[skill.id] > 7 ? 'text-emerald-600' : 'text-slate-500'}`}>
+                   {skillRatings[skill.id] || 0}/10
+                </span>
+              </div>
+              <input 
+                 type="range" min="1" max="10" step="1"
+                 className="w-full h-2 bg-slate-100 rounded-lg appearance-none cursor-pointer accent-blue-600"
+                 value={skillRatings[skill.id] || 0}
+                 onChange={(e) => handleSkillChange(skill.id, parseInt(e.target.value))}
+              />
+              <div className="flex justify-between text-xs text-slate-400 mt-1">
+                 <span>مبتدئ جداً</span>
+                 <span>خبير</span>
+              </div>
+            </motion.div>
+          ))}
+        </div>
+
+        <div className="flex justify-center mt-8">
+           <button 
+             onClick={handleNext}
+             disabled={!allSkillsRated}
+             className="bg-blue-600 text-white px-12 py-4 rounded-xl font-bold hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2 transition-all"
+           >
+             بدء اختبار المستوى <ArrowLeft />
+           </button>
+        </div>
       </motion.div>
     </div>
   );
